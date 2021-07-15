@@ -77,6 +77,27 @@ void PointCloudHandler::planeNormalization(const std::string& cloud_key){
     //transformPointCloud(R);
     pcl::transformPointCloud(*pclMap[cloud_key], *pclMap[cloud_key], R);
 
+
+/*
+    PCLptXYZRGB minPt, maxPt;
+    pcl::getMinMax3D(*pclMap[fixed_cloud_key], minPt, maxPt);
+    std::cout << minPt << "----" << maxPt << "fix--------\n";
+    pcl::getMinMax3D(*pclMap[moving_cloud_key], minPt, maxPt);
+    std::cout << minPt << "----" << maxPt << "mov--------\n";
+
+    std::cout << pclMap[fixed_cloud_key]->size() << " fix.....\n";
+    std::cout << pclMap[moving_cloud_key]->size() << " mov.....\n";
+
+
+
+
+    PCLptXYZRGB minPt, maxPt;
+    pcl::getMinMax3D(*pclMap[cloud_key], minPt, maxPt);
+    std::cout << minPt << "----" << maxPt << "--------\n";
+
+    std::cout << pclMap[cloud_key]->size() << " ....\n";
+*/
+
     return;
 }
 
@@ -146,7 +167,7 @@ void PointCloudHandler::loadFromDisk(const std::string& fixed_cloud_key, const s
 
 }
 
-void PointCloudHandler::scalePointCloud(const Vector2 &scale_factors, 
+void PointCloudHandler::scalePointCloud(const Vector2 &scale_factors,
                                         const string &cloud_to_scale,
                                         const std::string& cloud_type){
 

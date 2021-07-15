@@ -37,6 +37,8 @@ void PointCloudViz::showCloud(const PCLPointCloudXYZRGB::Ptr cloud,
 
 }
 
+
+
 void PointCloudViz::showTransparentCloud(const PCLPointCloudXYZRGB::Ptr cloud,
                                          const std::string& cloud_to_show, const int& size ){
 

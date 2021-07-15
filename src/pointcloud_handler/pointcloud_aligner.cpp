@@ -1,4 +1,5 @@
 #include "pointcloud_aligner.h"
+#include "../visualizer/visualizer.h"
 
 using namespace std;
 
@@ -11,9 +12,35 @@ void PointCloudAligner::computeAndApplyInitialRelativeGuess(const std::string& f
         if( getVerbosityLevel() )
             cerr << FBLU("Compute And Applying The Relative Initial Guess!") << "\n";
 
+
+PCLptXYZRGB minPt, maxPt;
+/*
+
+std::cout << "before plane norm\n";
+pcl::getMinMax3D(*pclMap[moving_cloud_key], minPt, maxPt);
+std::cout << minPt << "----" << maxPt << "mov--------\n\n";
+
+
+
+std::string fix_cloud = "fixed_cloud";
+PointCloudViz viz;
+viz.setViewerBackground(255,255,255);
+
+viz.showCloud( pclMap[fixed_cloud_key], fix_cloud);
+viz.spingUntilDeath();
+cv::waitKey();
+*/
+
+
+
         planeNormalization(fixed_cloud_key);
         planeNormalization(moving_cloud_key);
 
+/*
+std::cout <<"after pn\n" ;
+pcl::getMinMax3D(*pclMap[moving_cloud_key], minPt, maxPt);
+std::cout << minPt << "----" << maxPt << "mov--------\n\n";
+*/
         // Normalized along X and Y axis the Fixed Cloud
         Vector3d diff_t( initGuessTMap[moving_cloud_key] - initGuessTMap[fixed_cloud_key] );
                     //getPointCloud(moving_cloud_key)->getInitGuessT() - getPointCloud(fixed_cloud_key)->getInitGuessT() );
@@ -23,13 +50,39 @@ void PointCloudAligner::computeAndApplyInitialRelativeGuess(const std::string& f
         _init_mov_scale(0) *= _scaleNoise(0);
         _init_mov_scale(1) *= _scaleNoise(1);
         cerr << FBLU("InitMovScale Set to: ") << _init_mov_scale.transpose() << "\n";
+
         scalePointCloud( _init_mov_scale, moving_cloud_key, "rgb");
+
+
+    std::cout << "after scalePointCloud\n" ;
+    pcl::getMinMax3D(*pclMap[moving_cloud_key], minPt, maxPt);
+    std::cout << minPt << "----" << maxPt << "mov--------\n";
+    pcl::getMinMax3D(*pclMap[fixed_cloud_key], minPt, maxPt);
+    std::cout << minPt << "----" << maxPt << "fix--------\n\n";
+/*
+
+    std::string fix_cloud = "fixed_cloud";
+    PointCloudViz viz;
+    viz.setViewerBackground(255,255,255);
+
+    viz.showCloud( pclMap[fixed_cloud_key], fix_cloud);
+    viz.spingUntilDeath();
+    std::cout<<"dead\n";
+    cv::waitKey();
+    std::cout<<"wk\n";
+    viz.showCloud( pclMap[moving_cloud_key], "banaba");
+    viz.spingUntilDeath();
+    std::cout<<"dead\n";
+    cv::waitKey();
+    std::cout<<"wk\n";
+*/
 
         if( getVerbosityLevel() ){
             cerr << FYEL("Fixed_Cloud Rot_z amount: ") << initGuessQMap[fixed_cloud_key](2) << "\n";
             cerr << FYEL("Moving_Cloud Rot_z amount: ") << initGuessQMap[moving_cloud_key](2) << "\n";
             cerr << FYEL("Init alignment guess: ") << _initTfMap[moving_cloud_key]->translation().transpose() << "\n" << "\n";
         }
+
 
 }
 
@@ -41,14 +94,22 @@ void PointCloudAligner::computeExGFilteredPointCloud(const string& cloud_key, co
 
 void PointCloudAligner::computeEnvironmentalModels(const string& mov_cloud_key, const string& fix_cloud_key){
 
+/*
+std::string fix_cloud = "fixed_cloud";
+PointCloudViz viz;
+viz.setViewerBackground(255,255,255);
+
+viz.showCloud( pclMap[fix_cloud_key], fix_cloud);
+viz.spingUntilDeath();
+cv::waitKey();
+*/
+    ERMap.emplace( fix_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(fix_cloud_key) ) );
+    ERMap[fix_cloud_key]->loadFromPCLcloud( pclMap[fix_cloud_key], 0.01, _initTfMap[mov_cloud_key]->translation().head(2) );
+    ERMap[fix_cloud_key]->computeMMGridMap();
 
     ERMap.emplace( mov_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(mov_cloud_key) ) );
-    ERMap[mov_cloud_key]->loadFromPCLcloud( pclMap[mov_cloud_key], 0.02 );
+    ERMap[mov_cloud_key]->loadFromPCLcloud( pclMap[mov_cloud_key], 0.01 );
     ERMap[mov_cloud_key]->computeMMGridMap();
-
-    ERMap.emplace( fix_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(fix_cloud_key) ) );
-    ERMap[fix_cloud_key]->loadFromPCLcloud( pclMap[fix_cloud_key], 0.02, _initTfMap[mov_cloud_key]->translation().head(2) );
-    ERMap[fix_cloud_key]->computeMMGridMap();
 
     return;
 }
@@ -97,10 +158,23 @@ void PointCloudAligner::Match( const std::string& cloud1_name, const std::string
 
     cpm.SetMatchingWeights(_vis_feat_weight, _geom_feat_weight);
     cpm.SetParams(_dense_optical_flow_step, _useVisualFeatures, _useGeometricFeatures);
+    /*
     img1.imcopy( ERMap[cloud1_name]->getExgImg() );
     img2.imcopy( ERMap[cloud2_name]->getExgImg() );
+
+     */
+    img1.imcopy( ERMap[cloud1_name]->getRgbImg() );
+    img2.imcopy( ERMap[cloud2_name]->getRgbImg() );
+
     img1Cloud.imcopy( ERMap[cloud1_name]->getXyzImg() );
     img2Cloud.imcopy( ERMap[cloud2_name]->getXyzImg() );
+/*
+
+*/
+    img1.imshow((char*)"window");
+    cv::waitKey();
+    img2.imshow((char*)"window");
+    cv::waitKey();
 
     cpm.Matching(img1, img1Cloud, img2, img2Cloud, matches);
 

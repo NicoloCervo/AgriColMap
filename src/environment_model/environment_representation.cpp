@@ -7,15 +7,15 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
                                                   const Vector2& imgCenter,
                                                   const float& radius,
                                                   const cv::Size& gridMapSize){
-
+    std::cout<<"shift "<<imgCenter(0)<<" "<<imgCenter(1);
     _square_size = square_size;
     pcl::getMinMax3D(*pointCloud, minPt, maxPt);
 
     _width = gridMapSize.width;
     _height = gridMapSize.height;
-
-    minPt.x = - ( _width / 2 ) * square_size + imgCenter(0);
-    maxPt.y = - ( _height / 2 ) * square_size + imgCenter(1);
+//why?? just set xy_coord
+    minPt.x = - ( _width / 2 ) * square_size + 0;imgCenter(0);
+    maxPt.y = - ( _height / 2 ) * square_size + 0;imgCenter(1);
 
     x_coord = minPt.x;
     y_coord = maxPt.y;
@@ -25,7 +25,7 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
     init_pt.x = 0.f; init_pt.y = 0.f; init_pt.z = 0.f;
 
     _gridMap = std::vector< std::vector<PCLptXYZRGB> >( _width * _height);
-    KDTreeXYvector kdTreeXY_points(_width * _height);
+    KDTreeXYvector kdTreeXY_points(_width * _height); //list of (+-)centers of the gridmap cells
     for(unsigned int r = 0; r < _height; ++r){
         for(unsigned int c = 0; c < _width; ++c){
             kdTreeXY_points[c + r * _width](0) = x_coord + (float) c * square_size;

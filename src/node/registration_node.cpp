@@ -14,10 +14,19 @@ int main(int argc, char **argv) {
     std::string mov_cloud = "moving_cloud";
     std::string fix_cloud = "fixed_cloud";
 
+
+
     PointCloudAligner pclAligner;
     pclAligner.initFromYaml(yaml_filename);
     pclAligner.loadFromDisk(fix_cloud, mov_cloud);
+/*
+    PointCloudViz viz;
+    viz.setViewerBackground(255,255,255);
+    viz.showCloud( pclAligner.getPcl(fix_cloud), fix_cloud);
+    viz.spingUntilDeath();
+    cv::waitKey();
 
+*/
     string scaleMagStr = argv[2];
     float scaleMag = stof(scaleMagStr)/100;
     string TranslNoiseMagStr = argv[3];
