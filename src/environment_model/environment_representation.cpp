@@ -7,15 +7,18 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
                                                   const Vector2& imgCenter,
                                                   const float& radius,
                                                   const cv::Size& gridMapSize){
-    std::cout<<"shift "<<imgCenter(0)<<" "<<imgCenter(1);
+    std::cout<< _cloudName <<" shift "<<imgCenter(0)<<" "<<imgCenter(1)<<"\n";
+
+    float _radius = square_size/2;
+    std::cout<< _cloudName <<" radius "<<_radius<<"\n";
     _square_size = square_size;
     pcl::getMinMax3D(*pointCloud, minPt, maxPt);
 
     _width = gridMapSize.width;
     _height = gridMapSize.height;
 //why?? just set xy_coord
-    minPt.x = - ( _width / 2 ) * square_size + 0;imgCenter(0);
-    maxPt.y = - ( _height / 2 ) * square_size + 0;imgCenter(1);
+    minPt.x = - ( _width / 2 ) * square_size + imgCenter(0);
+    maxPt.y = - ( _height / 2 ) * square_size + imgCenter(1);
 
     x_coord = minPt.x;
     y_coord = maxPt.y;
@@ -41,7 +44,7 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
       KDTreeXYpoint answer;
       int index;
 
-      float approx_distance = kd_tree->findNeighbor(answer, index, query_point, radius);
+      float approx_distance = kd_tree->findNeighbor(answer, index, query_point, _radius);
       if (approx_distance > 0) {
           float c_idx = ( (answer(0) - x_coord) / square_size );
           float r_idx = ( (answer(1) - y_coord) / square_size );
