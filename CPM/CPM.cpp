@@ -312,6 +312,8 @@ int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Clo
         // 		ImageFeature::imSIFT(_pyd2[i], _im2f[i], 2, 1, true, 8);
     }
     //std::exit(1);
+
+
     t.toc("get feature: ");
 
     int step = _step;
@@ -374,6 +376,7 @@ int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Clo
     //kLabels.imshow("kLabels", 0);
 
     //t.toc("generate seeds: ");
+
 
     t.tic();
     OnePass(_pyd1, _pyd2, _im1_exg, _im1_elev, _im2_exg, _im2_elev, _seeds, _neighbors, _pydSeedsFlow);
@@ -528,7 +531,6 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
                     fpfh->points[i].histogram[k] /= normalizer;
                 }
         }
-
 
 
         int counter = 0;

@@ -12,7 +12,6 @@ void PointCloudAligner::computeAndApplyInitialRelativeGuess(const std::string& f
         if( getVerbosityLevel() )
             cerr << FBLU("Compute And Applying The Relative Initial Guess!") << "\n";
 
-
 PCLptXYZRGB minPt, maxPt;
 /*
 
@@ -68,24 +67,23 @@ std::cout << minPt << "----" << maxPt << "mov--------\n\n";
         scalePointCloud( _init_mov_scale, moving_cloud_key, "rgb");
 
 
-    std::cout << "after scalePointCloud\n" ;
-    pcl::getMinMax3D(*pclMap[moving_cloud_key], minPt, maxPt);
-    std::cout << minPt << "----" << maxPt << "mov--------\n";
-    pcl::getMinMax3D(*pclMap[fixed_cloud_key], minPt, maxPt);
-    std::cout << minPt << "----" << maxPt << "fix--------\n\n";
-/*
+
+        /*
 
 
+            std::cout << "after scalePointCloud\n" ;
+            pcl::getMinMax3D(*pclMap[moving_cloud_key], minPt, maxPt);
+            std::cout << minPt << "----" << maxPt << "mov--------\n";
+            pcl::getMinMax3D(*pclMap[fixed_cloud_key], minPt, maxPt);
+            std::cout << minPt << "----" << maxPt << "fix--------\n\n";
 
-
-*/
+        */
 
         if( getVerbosityLevel() ){
             cerr << FYEL("Fixed_Cloud Rot_z amount: ") << initGuessQMap[fixed_cloud_key](2) << "\n";
             cerr << FYEL("Moving_Cloud Rot_z amount: ") << initGuessQMap[moving_cloud_key](2) << "\n";
             cerr << FYEL("Init alignment guess: ") << _initTfMap[moving_cloud_key]->translation().transpose() << "\n" << "\n";
         }
-
 
 }
 
@@ -108,15 +106,16 @@ cv::waitKey();
 */
     PCLptXYZRGB minPt, maxPt;
     pcl::getMinMax3D(*pclMap[mov_cloud_key], minPt, maxPt);
-    float resolution = std::max(maxPt.x-minPt.x, maxPt.y-minPt.y)/500; //meters
-    std::cout<<"res "<<resolution<<"\n";
+    //float square_size = std::max(maxPt.x-minPt.x, maxPt.y-minPt.y)/1300; //meters per pixel
+    //if(resolution<0.5)
+    float square_size=1; //pcl too sparse for smaller pixels
 
     ERMap.emplace( fix_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(fix_cloud_key) ) );
-    ERMap[fix_cloud_key]->loadFromPCLcloud( pclMap[fix_cloud_key], resolution, _initTfMap[mov_cloud_key]->translation().head(2) );
+    ERMap[fix_cloud_key]->loadFromPCLcloud( pclMap[fix_cloud_key], square_size, _initTfMap[mov_cloud_key]->translation().head(2) );
     ERMap[fix_cloud_key]->computeMMGridMap();
 
     ERMap.emplace( mov_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(mov_cloud_key) ) );
-    ERMap[mov_cloud_key]->loadFromPCLcloud( pclMap[mov_cloud_key], resolution );
+    ERMap[mov_cloud_key]->loadFromPCLcloud( pclMap[mov_cloud_key], square_size );
     ERMap[mov_cloud_key]->computeMMGridMap();
 
     return;
@@ -177,13 +176,17 @@ void PointCloudAligner::Match( const std::string& cloud1_name, const std::string
 
     img1Cloud.imcopy( ERMap[cloud1_name]->getXyzImg() );
     img2Cloud.imcopy( ERMap[cloud2_name]->getXyzImg() );
-/*
+    /*
 
-*/
-img1.imshow((char*)"window");
-cv::waitKey();
-img2.imshow((char*)"window");
-cv::waitKey();
+    */
+
+    if( _showDOFCorrespondences ){
+        img1.imshow((char*)"window");
+        // img1.saveImage((char*)"/home/n/Desktop/gridmap");
+        cv::waitKey();
+        img2.imshow((char*)"window");
+        cv::waitKey();
+    }
 
     cpm.Matching(img1, img1Cloud, img2, img2Cloud, matches);
 
@@ -208,6 +211,20 @@ cv::waitKey();
     downsamplePCL(cloud1_name);
     downsamplePCL(cloud2_name);
 
+/*
+PointCloudViz viz;
+viz.setViewerBackground(255,255,255);
+viz.showCloud( pclMapFiltered["fixed_cloud"], "a");
+viz.spingUntilDeath();
+std::cout<<"dead\n";
+cv::waitKey();
+std::cout<<"wk\n";
+viz.showCloud( pclMapFiltered["moving_cloud"], "b");
+viz.spingUntilDeath();
+std::cout<<"dead\n";
+cv::waitKey();
+std::cout<<"wk\n";
+*/
     auto compute_start = std::chrono::high_resolution_clock::now();
     finalRefinement(cloud1_name, cloud2_name);
     auto compute_end = std::chrono::high_resolution_clock::now();
@@ -267,7 +284,9 @@ void PointCloudAligner::writeAffineTransform(const string& iter, const string& c
                    << _R(2,0) << " " << _R(2,1) << " " << _R(2,2) << " " << _t(2) << " "
                    << scale(0) << " " << scale(1) << " " << _scaleNoise(0) << " "
                    << _scaleNoise(1) << " " << _TranslNoise(0) << " "
-                   << _TranslNoise(1) << " " << _YawNoise;
+                   << _TranslNoise(1) << " " << _YawNoise << " "
+                   << _initTfMap[cloud]->translation().transpose()[0] << " "
+                   << _initTfMap[cloud]->translation().transpose()[1];
     outputAffineTf.close();
     cerr << FBLU("Ground Truth Affine Transform Written in: ") << getPackagePath() + "/params/output/" +
                  getMovingCloudPath() + "/" + getMovingCloudPath() + "_AffineGroundTruth_" +

@@ -7,28 +7,30 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
                                                   const Vector2& imgCenter,
                                                   const float& radius,
                                                   const cv::Size& gridMapSize){
-    std::cout<< _cloudName <<" shift "<<imgCenter(0)<<" "<<imgCenter(1)<<"\n";
 
-    float _radius = square_size/2;
-    std::cout<< _cloudName <<" radius "<<_radius<<"\n";
+    float _radius = square_size*0.8;
     _square_size = square_size;
-    pcl::getMinMax3D(*pointCloud, minPt, maxPt);
-
     _width = gridMapSize.width;
     _height = gridMapSize.height;
-//why?? just set xy_coord
-    minPt.x = - ( _width / 2 ) * square_size + imgCenter(0);
-    maxPt.y = - ( _height / 2 ) * square_size + imgCenter(1);
-
-    x_coord = minPt.x;
-    y_coord = maxPt.y;
+    x_coord = - ( _width / 2 ) * square_size + imgCenter(0);
+    y_coord = - ( _height / 2 ) * square_size + imgCenter(1);
     altitude_scale = 255.0 / (maxPt.z - minPt.z);
 
+    pcl::getMinMax3D(*pointCloud, minPt, maxPt);
+    /*
+    std::cout<< _cloudName <<" shift "<<imgCenter(0)<<" "<<imgCenter(1)<<"\n";
+    std::cout<< _cloudName <<" radius "<<_radius<<"\n";
+    std::cout<<"_width "<<_width<<"\n";
+    std::cout<<"_height "<<_height<<"\n";
+    std::cout<<"xy "<<x_coord<<" "<<y_coord<<"\n";
+    std::cout<<"sqsz "<<square_size<<"\n";
+*/
     PCLptXYZRGB init_pt;
     init_pt.x = 0.f; init_pt.y = 0.f; init_pt.z = 0.f;
 
-    _gridMap = std::vector< std::vector<PCLptXYZRGB> >( _width * _height);
-    KDTreeXYvector kdTreeXY_points(_width * _height); //list of (+-)centers of the gridmap cells
+    _gridMap = std::vector< std::vector<PCLptXYZRGB> >( _width * _height); //lists of points closest to each center
+    KDTreeXYvector kdTreeXY_points(_width * _height); //list of centers of the gridmap cells
+
     for(unsigned int r = 0; r < _height; ++r){
         for(unsigned int c = 0; c < _width; ++c){
             kdTreeXY_points[c + r * _width](0) = x_coord + (float) c * square_size;
@@ -38,21 +40,20 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
 
     float leaf_range = 0.1;
     KDTreeXY* kd_tree = new KDTreeXY(kdTreeXY_points, leaf_range);
-
+    int fails=0;
     for( PCLptXYZRGB pt : pointCloud->points){
-      KDTreeXYpoint query_point = pt.getVector3fMap().head(2);
-      KDTreeXYpoint answer;
-      int index;
+        KDTreeXYpoint query_point = pt.getVector3fMap().head(2); //xy coords of the pcl point
+        KDTreeXYpoint answer;
+        int index;
 
-      float approx_distance = kd_tree->findNeighbor(answer, index, query_point, _radius);
-      if (approx_distance > 0) {
+        float approx_distance = kd_tree->findNeighbor(answer, index, query_point, _radius); //find gridmap center closest to pcl point
+        if (approx_distance > 0) {
           float c_idx = ( (answer(0) - x_coord) / square_size );
           float r_idx = ( (answer(1) - y_coord) / square_size );
           int _gridMapIndex = c_idx + r_idx * _width;
            _gridMap[_gridMapIndex].push_back(pt);
-      }
+        }
     }
-
 }
 
 PCLptXYZRGB EnvironmentRepresentation::computeAveragePoint(std::vector<PCLptXYZRGB>& ptVec,
@@ -63,8 +64,7 @@ PCLptXYZRGB EnvironmentRepresentation::computeAveragePoint(std::vector<PCLptXYZR
     float sum = 0.f; float x = 0.f; float y = 0.f;
     float z = 0.f; float r = 0.f; float g = 0.f; float b = 0.f;
     Vector2 nom_pt(x_coord + col * _square_size, y_coord + row * _square_size);
-    float radius = 0.01;
-    float std_dev = 0.04;
+    float std_dev = 0.55;
     float den = 2.f * std_dev * std_dev;
     int iter = 0;
     for( PCLptXYZRGB pt : ptVec ){

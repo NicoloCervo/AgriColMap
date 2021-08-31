@@ -228,6 +228,7 @@ void PointCloudHandler::downsamplePCL(const std::string& cloud_name, const float
     PCLPointCloudXYZRGB::Ptr _pcl_filtered( new PCLPointCloudXYZRGB() );
     PCLvoxelGridXYZRGB filter;
     filter.setInputCloud (pclMapFiltered[cloud_name]);
+    //filter.setInputCloud (pclMap[cloud_name]);  too slow, unnecessary
     filter.setLeafSize (down_rate, down_rate, down_rate);
     filter.filter (*_pcl_filtered);
     pclMapFilteredDownSampled.emplace( cloud_name, _pcl_filtered);
