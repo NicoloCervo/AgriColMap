@@ -377,7 +377,6 @@ int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Clo
 
     //t.toc("generate seeds: ");
 
-
     t.tic();
     OnePass(_pyd1, _pyd2, _im1_exg, _im1_elev, _im2_exg, _im2_elev, _seeds, _neighbors, _pydSeedsFlow);
     t.toc("forward matching: ");
@@ -387,6 +386,7 @@ int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Clo
     // cross check
     int* validFlag = new int[numV];
     CrossCheck(_seeds, _pydSeedsFlow[0], _pydSeedsFlow2[0], _kLabels2, validFlag, _checkThreshold);
+
     seedsFlow.copyData(_pydSeedsFlow[0]);
     for (int i = 0; i < numV; i++){
         if (!validFlag[i]){
@@ -455,7 +455,6 @@ void CPM::NormalsAndFPFHEstimation(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pc
     NormalEstimator.setSearchMethod (tree);
     NormalEstimator.setRadiusSearch(0.1);
     NormalEstimator.compute(*normals);
-
     // Create the FPFH estimation class, and pass the input dataset+normals to it
     pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
     fpfhEst.setNumberOfThreads(12);
@@ -463,7 +462,6 @@ void CPM::NormalsAndFPFHEstimation(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pc
     fpfhEst.setInputCloud (cloud);
     fpfhEst.setInputNormals (normals);
     fpfhEst.setSearchMethod(tree);
-
     if(ratio == 0)
         fpfhEst.setRadiusSearch (0.06);
     else
@@ -481,18 +479,29 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
     int channels = img.nchannels();
     int channels_cloud = imgCloud.nchannels();
 
-    cv::Mat cvImg_Exg(h, w, CV_8UC1);
+/// convert FImages to cv::Mat
+    //cv::Mat cvImg_Exg(h, w, CV_8UC1);
+    cv::Mat cvImg_Exg(h, w, CV_8UC3);
     cv::Mat cvImg_Elev(h, w, CV_32FC3);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
-                cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels ] * 255;
+                //cvImg_Exg.at<unsigned char >(i, j) = img[ (i*w + j) * channels +2] * 255;
+                cvImg_Exg.at<cv::Vec3b>(i, j) = cv::Vec3b(img[ (i*w + j) * channels ] * 255, img[ (i*w + j) * channels +1] * 255, img[ (i*w + j) * channels +2] * 255);
                 cvImg_Elev.at<cv::Vec3f>(i, j) = cv::Vec3f( imgCloud[ (i*w + j)*channels_cloud ], imgCloud[ (i*w + j)*channels_cloud + 1 ], imgCloud[ (i*w + j)*channels_cloud + 2 ]); //0;//img[ (i*w + j) * channels + 1 ] * 255;
         }
     }
 
+    /*
+    cv::Mat channel(h, w, CV_8UC1);
+    cv::extractChannel(cvImg_Elev, channel, 2);
+    cv::imshow("/home/n/Desktop/elev.png", channel);
+    cv::imwrite("/home/n/Desktop/elev.png", channel);
+    cv::waitKey(0);
+     */
+
     outFtImg_Exg.allocate(w, h, 104);
     outFtImg_Elev.allocate(w, h, 33);
-
+///DAISY features
     if( _useVisFeats ){
         cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
         cv::Mat outFeatures_Exg;
@@ -509,7 +518,7 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
             }
         }
     }
-
+///FPFH features
     if( _useGeomFeats ) {
         // Creating the Cloud
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
@@ -517,21 +526,21 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
         pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh (new pcl::PointCloud<pcl::FPFHSignature33> ());
         cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
         CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
+
         NormalsAndFPFHEstimation(cloud, cloud_normals, fpfh, cloud_ratio);
 
         // Normalizing FPFH descriptor
         int fpfhSize = 33;
         for (int i = 0; i < fpfh->size(); i++){
-                float normalizer = 0.f;
-                for (int k = 0; k < fpfhSize; k++){
-                    normalizer +=  fpfh->points[i].histogram[k]*fpfh->points[i].histogram[k];
-                }
-                normalizer = sqrt(normalizer);
-                for (int k = 0; k < fpfhSize; k++){
-                    fpfh->points[i].histogram[k] /= normalizer;
-                }
+            float normalizer = 0.f;
+            for (int k = 0; k < fpfhSize; k++){
+                normalizer +=  fpfh->points[i].histogram[k]*fpfh->points[i].histogram[k];
+            }
+            normalizer = sqrt(normalizer);
+            for (int k = 0; k < fpfhSize; k++){
+                fpfh->points[i].histogram[k] /= normalizer;
+            }
         }
-
 
         int counter = 0;
         for (int i = 0; i < h; i++){
@@ -552,6 +561,7 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
 
 void CPM::CrossCheck(IntImage& seeds, FImage& seedsFlow, FImage& seedsFlow2, IntImage& kLabel2, int* valid, float th)
 {
+
     int w = kLabel2.width();
     int h = kLabel2.height();
     int numV = seeds.height();
@@ -839,6 +849,7 @@ void CPM::PyramidRandomSearch(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage*
 
 void CPM::OnePass(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1_exg, UCImage* im1_elev, UCImage* im2_exg, UCImage* im2_elev, IntImage& seeds, IntImage& neighbors, FImage* pydSeedsFlow)
 {
+
     FImage rawImg1 = pyd1[0];
     FImage rawImg2 = pyd2[0];
 

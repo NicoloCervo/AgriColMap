@@ -10,11 +10,13 @@ class EnvironmentRepresentation{
         EnvironmentRepresentation(const std::string& cloudName);
         ~EnvironmentRepresentation(){}
 
+
         void loadFromPCLcloud(const PCLPointCloudXYZRGB::Ptr& pointCloud,
                               const float &square_size,
+                              const cv::Size& gridMapSize = cv::Size(1300,1300),
                               const Vector2& imgCenter = Vector2(0.f, 0.f),
-                              const float& radius = 0.01,
-                              const cv::Size& gridMapSize = cv::Size(1300,1300) );
+                              const float& radius = 0.01
+                               );
 
         void computeMMGridMap();
 

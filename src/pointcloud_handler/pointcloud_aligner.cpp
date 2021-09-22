@@ -9,6 +9,7 @@ PointCloudAligner::PointCloudAligner() : _R(Matrix3::Identity()),
 void PointCloudAligner::computeAndApplyInitialRelativeGuess(const std::string& fixed_cloud_key,
                                                             const std::string& moving_cloud_key){
 
+
         if( getVerbosityLevel() )
             cerr << FBLU("Compute And Applying The Relative Initial Guess!") << "\n";
 
@@ -107,15 +108,19 @@ cv::waitKey();
     PCLptXYZRGB minPt, maxPt;
     pcl::getMinMax3D(*pclMap[mov_cloud_key], minPt, maxPt);
     //float square_size = std::max(maxPt.x-minPt.x, maxPt.y-minPt.y)/1300; //meters per pixel
-    //if(resolution<0.5)
-    float square_size=1; //pcl too sparse for smaller pixels
+    //if(square_size<1)
+    float square_size=1;
+    //pcl too sparse for smaller pixels
+    int pixels = std::max( (int)(std::max(maxPt.x-minPt.x, maxPt.y-minPt.y)*1.414+60), 200 );
+    gridMapSize = cv::Size(pixels, pixels);
+    std::cout<<"gridMapSize "<<gridMapSize<<std::endl;
 
     ERMap.emplace( fix_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(fix_cloud_key) ) );
-    ERMap[fix_cloud_key]->loadFromPCLcloud( pclMap[fix_cloud_key], square_size, _initTfMap[mov_cloud_key]->translation().head(2) );
+    ERMap[fix_cloud_key]->loadFromPCLcloud( pclMap[fix_cloud_key], square_size, gridMapSize, _initTfMap[mov_cloud_key]->translation().head(2) );
     ERMap[fix_cloud_key]->computeMMGridMap();
 
     ERMap.emplace( mov_cloud_key, boost::shared_ptr<EnvironmentRepresentation> ( new EnvironmentRepresentation(mov_cloud_key) ) );
-    ERMap[mov_cloud_key]->loadFromPCLcloud( pclMap[mov_cloud_key], square_size );
+    ERMap[mov_cloud_key]->loadFromPCLcloud( pclMap[mov_cloud_key], square_size, gridMapSize );
     ERMap[mov_cloud_key]->computeMMGridMap();
 
     return;
@@ -166,8 +171,6 @@ void PointCloudAligner::Match( const std::string& cloud1_name, const std::string
     cpm.SetMatchingWeights(_vis_feat_weight, _geom_feat_weight);
     cpm.SetParams(_dense_optical_flow_step, _useVisualFeatures, _useGeometricFeatures);
 /*
-
-
     img1.imcopy( ERMap[cloud1_name]->getExgImg() );
     img2.imcopy( ERMap[cloud2_name]->getExgImg() );
 */
@@ -176,9 +179,6 @@ void PointCloudAligner::Match( const std::string& cloud1_name, const std::string
 
     img1Cloud.imcopy( ERMap[cloud1_name]->getXyzImg() );
     img2Cloud.imcopy( ERMap[cloud2_name]->getXyzImg() );
-    /*
-
-    */
 
     if( _showDOFCorrespondences ){
         img1.imshow((char*)"window");
@@ -361,7 +361,7 @@ void PointCloudAligner::finalRefinement(const string &cloud1_name, const string 
 
     vector<Vector3> fixed_pts, moving_pts;
     int iter = 0;
-    float leaf_range = 0.1;
+    float leaf_range = 1;
     KDTreeXYZ* kd_tree = new KDTreeXYZ(kdTreeXYZ_points, leaf_range);
 
     while(iter < _max_iter_num){

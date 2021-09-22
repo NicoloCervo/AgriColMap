@@ -189,7 +189,7 @@ void PointCloudHandler::scalePointCloud(const Vector2 &scale_factors,
 void PointCloudHandler::transformPointCloud( const Transform& tf,
                                              const std::string& cloud_to_scale,
                                              const std::string& cloud_type){
-    
+
     if ( cloud_type.compare("rgb") == 0 ) {
         pcl::transformPointCloud(*pclMap[cloud_to_scale], *pclMap[cloud_to_scale], tf);
     } else if ( cloud_type.compare("exg") == 0 ) {
@@ -206,10 +206,10 @@ void PointCloudHandler::ExGFilterPCL(const string &cloud_key, const Vector3i& cl
 
     PCLPointCloudXYZRGB::Ptr data_filtered( new PCLPointCloudXYZRGB() );
     for(PCLptXYZRGB pt : pclMap[cloud_key]->points){
-        if( (float) computeExGforXYZRGBPoint(pt) > 30){
+        //if( (float) computeExGforXYZRGBPoint(pt) > 30){
             pt.r = cloud_color(0); pt.g = cloud_color(1); pt.b = cloud_color(2);
             data_filtered->points.push_back(pt);
-        }
+        //}
     }
     pclMapFiltered.emplace( cloud_key, data_filtered );
     return;
@@ -222,6 +222,11 @@ void PointCloudHandler::downsamplePCL(const std::string& cloud_name, const float
         down_rate = _downsampling_rate;
     else
         down_rate = rate;
+
+    cerr << "\n";
+    cerr << FBLU("Downsampling " + cloud_name + " Cloud... ") << "\n";
+    cerr <<  FGRN("Cloud: ")<<pclMap[cloud_name]->points.size() <<
+         FGRN("  Cloud DownSampled: ") << pclMapFiltered[cloud_name]->points.size() << "\n" << "\n";
 
 
     // Filtering the PCL cloud PointCloud
@@ -236,9 +241,10 @@ void PointCloudHandler::downsamplePCL(const std::string& cloud_name, const float
 
     cerr << "\n";
     cerr << FBLU("Downsampling " + cloud_name + " Cloud... ") << "\n";
-    int cloud1_size = pclMapFiltered[cloud_name]->points.size();
-    cerr << FGRN("Cloud DownSampled: ") << cloud1_size << FGRN(" ==> ") <<
-            pclMapFilteredDownSampled[cloud_name]->points.size() << " DownSampling Factor: " << down_rate << "\n" << "\n";
+    cerr <<  FGRN("Cloud: ")<<pclMap[cloud_name]->points.size() <<
+        FGRN("  Cloud DownSampled: ") << pclMapFiltered[cloud_name]->points.size() <<
+        FGRN(" ==> ") << pclMapFilteredDownSampled[cloud_name]->points.size() <<
+        " DownSampling Factor: " << down_rate << "\n" << "\n";
 }
 
 

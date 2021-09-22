@@ -4,9 +4,11 @@ EnvironmentRepresentation::EnvironmentRepresentation(const std::string& cloudNam
 
 void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr& pointCloud,
                                                   const float& square_size,
+                                                  const cv::Size& gridMapSize,
                                                   const Vector2& imgCenter,
-                                                  const float& radius,
-                                                  const cv::Size& gridMapSize){
+                                                  const float& radius
+                                                  ){
+
 
     float _radius = square_size*0.8;
     _square_size = square_size;
@@ -59,7 +61,6 @@ void EnvironmentRepresentation::loadFromPCLcloud( const PCLPointCloudXYZRGB::Ptr
 PCLptXYZRGB EnvironmentRepresentation::computeAveragePoint(std::vector<PCLptXYZRGB>& ptVec,
                                                            const unsigned int& col,
                                                            const unsigned int& row){
-
     PCLptXYZRGB out_pt;
     float sum = 0.f; float x = 0.f; float y = 0.f;
     float z = 0.f; float r = 0.f; float g = 0.f; float b = 0.f;
@@ -97,6 +98,7 @@ PCLptXYZRGB EnvironmentRepresentation::computeAveragePoint(std::vector<PCLptXYZR
 }
 
 void EnvironmentRepresentation::computeMMGridMap(){
+
 
     // Image size is flipped for the sake of better visualization of the results
     exgImg = cv::Mat( cv::Size(_height, _width), CV_8UC1, cv::Scalar(0) );

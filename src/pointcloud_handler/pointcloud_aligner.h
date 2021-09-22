@@ -41,7 +41,8 @@ class PointCloudAligner : public PointCloudHandler{
         PCLPointCloudXYZRGB::Ptr inline getPcl(const std::string& cloud_to_get){ return pclMap[cloud_to_get]; }
 
         std::unordered_map<std::string, const boost::shared_ptr<EnvironmentRepresentation> > ERMap;
-
+        inline cv::Size getMapSize(){ return gridMapSize; }
+        //static inline cv::Size setMapSize(cv::Size& size){ gridMapSize = size; }
     private:
 
         void showDOFCorrespondeces(const int& len,
@@ -74,4 +75,6 @@ class PointCloudAligner : public PointCloudHandler{
         Vector3 _t;
 
         vector<Vector3> fix_pts, mov_pts;
+
+        cv::Size gridMapSize;
 };
