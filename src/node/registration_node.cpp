@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     viz.showCloud( pclAligner.getPcl(mov_cloud), mov_cloud);
     //viz.showCloud( pclAligner.getPcl(fix_cloud), fix_cloud);
     //viz.showCloud( pclAligner.getPcl(mov_cloud), mov_cloud);
-    viz.spingUntilDeath();
+    //viz.spingUntilDeath();
 */
     return 0;
 }

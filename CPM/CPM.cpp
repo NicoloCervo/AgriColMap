@@ -199,7 +199,6 @@ void CPM::addFlowToAccumulator(const Eigen::Vector2f &pt, cv::Mat &acc){
 
 void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches, const cv::Mat& rgb1, const cv::Mat& rgb2){
 
-
     std::vector< Eigen::Vector4f > inpMatchesFilt;
     for(unsigned int it = 0; it < inpMatches.height(); ++it){
         cv::Vec3b pt1 = rgb1.at<cv::Vec3b>(inpMatches[4*it+1], inpMatches[4*it]);
@@ -453,22 +452,49 @@ void CPM::NormalsAndFPFHEstimation(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pc
     NormalEstimator.setInputCloud (cloud);
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
     NormalEstimator.setSearchMethod (tree);
-    NormalEstimator.setRadiusSearch(0.1);
+    NormalEstimator.setRadiusSearch(5);
     NormalEstimator.compute(*normals);
+
     // Create the FPFH estimation class, and pass the input dataset+normals to it
-    pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
-    fpfhEst.setNumberOfThreads(12);
+    pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
+    //fpfhEst.setNumberOfThreads(12);
     //pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
     fpfhEst.setInputCloud (cloud);
     fpfhEst.setInputNormals (normals);
     fpfhEst.setSearchMethod(tree);
+
     if(ratio == 0)
-        fpfhEst.setRadiusSearch (0.06);
+        fpfhEst.setRadiusSearch (8);
     else
-        fpfhEst.setRadiusSearch (0.06*ratio);
+        fpfhEst.setRadiusSearch (8);//*ratio);
     fpfhEst.compute (*fpfh);
 
     return;
+}
+
+void tokenize(std::string const &str, const char delim,
+              std::vector<std::string> &out)
+{
+    // construct a stream from the string
+    std::stringstream ss(str);
+
+    std::string s;
+    while (std::getline(ss, s, delim)) {
+        out.push_back(s);
+    }
+}
+
+std::string exec(const char* cmd) {
+    std::array<char, 128> buffer{};
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
 }
 
 void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
@@ -491,16 +517,19 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
         }
     }
 
-    /*
     cv::Mat channel(h, w, CV_8UC1);
     cv::extractChannel(cvImg_Elev, channel, 2);
-    cv::imshow("/home/n/Desktop/elev.png", channel);
-    cv::imwrite("/home/n/Desktop/elev.png", channel);
-    cv::waitKey(0);
-     */
+    //cv::imshow("/home/n/Desktop/elev.png", cvImg_Elev);
+    //cv::imwrite("/home/n/Desktop/elev.png", channel);
+   // cv::waitKey(0);
 
-    outFtImg_Exg.allocate(w, h, 104);
-    outFtImg_Elev.allocate(w, h, 33);
+///CHECK
+    int featureSize = 1; //352 for SHOT features, 33 for FPFH features, 1 for single channel elev
+    outFtImg_Exg.allocate(w, h, 104); // for DAISY features
+    outFtImg_Elev.allocate(w, h, featureSize);
+
+
+
 ///DAISY features
     if( _useVisFeats ){
         cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
@@ -508,6 +537,7 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
         daisy->compute(cvImg_Exg, outFeatures_Exg);
 
         int itSize = outFeatures_Exg.cols;
+
         //outFtImg_Exg.allocate(w, h, itSize);
         for (int i = 0; i < h; i++){
             for (int j = 0; j < w; j++){
@@ -518,41 +548,87 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
             }
         }
     }
-///FPFH features
+
+
     if( _useGeomFeats ) {
+/*
+        //with elev only
+        for (int i = 0; i < h; i++){
+            for (int j = 0; j < w; j++){
+                int idx = i*w + j;
+                outFtImg_Elev.pData[idx] = channel.at<unsigned char>(i, j);
+            }
+        }
+*/
+
+/*
+        std::cout<<"ind "<<cloudIndexes.size()<<std::endl;
+        std::cout<<"img "<<cvImg_Elev.size()<<std::endl;
+        std::cout<<"cloud "<<cloud->size()<<std::endl;
+        std::cout<<"normals cloud size "<< normals->size ()<<std::endl;
+        std::cout<<"fpfh cloud size "<< fpfhs->size ()<<std::endl;
+*/
+
+
+        ///FPFH features
         // Creating the Cloud
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
-        pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh (new pcl::PointCloud<pcl::FPFHSignature33> ());
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>());
+
         cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
         CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
 
-        NormalsAndFPFHEstimation(cloud, cloud_normals, fpfh, cloud_ratio);
+        std::string writePath = "/home/n/Desktop/cloud.ply";
+        pcl::io::savePLYFileBinary(writePath, *cloud);
 
-        // Normalizing FPFH descriptor
-        int fpfhSize = 33;
-        for (int i = 0; i < fpfh->size(); i++){
+        ///call other binary for feature extraction
+        char* cmd =(char*)"/home/n/Desktop/feature_extractor/bin/./feature_extractor";
+
+        std::vector<std::string> char_features;
+        std::string in = exec(cmd);
+        const char delim = ' ';
+
+        tokenize(in, delim, char_features);
+
+        std::vector<float> single_histogram;
+        std::vector<std::vector<float>> histograms;
+
+
+        for(int i=0; i<char_features.size(); i++){
+            if(i%featureSize==0 && i!=0){
+                histograms.push_back(single_histogram);
+                single_histogram.clear();
+            }
+            float feature = std::stof(char_features[i]);
+            single_histogram.push_back(feature);
+        }
+        histograms.push_back(single_histogram);
+
+
+        /// Normalizing descriptor
+
+        for (int i = 0; i < histograms.size(); i++){
             float normalizer = 0.f;
-            for (int k = 0; k < fpfhSize; k++){
-                normalizer +=  fpfh->points[i].histogram[k]*fpfh->points[i].histogram[k];
+            for (int k = 0; k < featureSize; k++){
+                normalizer +=  histograms[i][k]*histograms[i][k];
             }
             normalizer = sqrt(normalizer);
-            for (int k = 0; k < fpfhSize; k++){
-                fpfh->points[i].histogram[k] /= normalizer;
+            for (int k = 0; k < featureSize; k++){
+                histograms[i][k] /= normalizer;
             }
         }
 
+        ///put features in image
         int counter = 0;
         for (int i = 0; i < h; i++){
             for (int j = 0; j < w; j++){
                 int idx = i*w + j;
                 if( cloudIndexes.at<unsigned char>(i, j) == 1 ){
-                    for (int k = 0; k < fpfhSize; k++)
-                        outFtImg_Elev.pData[idx*fpfhSize + k] = (unsigned char)round(fpfh->points[counter].histogram[k]*255);
+                    for (int k = 0; k < featureSize; k++)
+                        outFtImg_Elev.pData[idx*featureSize + k] = (unsigned char)round(histograms[counter][k]*255);
                     counter++;
                 } else if( cloudIndexes.at<unsigned char>(i, j) == 0 ) {
-                    for (int k = 0; k < fpfhSize; k++)
-                        outFtImg_Elev.pData[idx*fpfhSize + k] = 0;
+                    for (int k = 0; k < featureSize; k++)
+                       outFtImg_Elev.pData[idx*featureSize + k] = 0;
                 }
             }
         }
@@ -661,7 +737,7 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_
 
 #endif
     //std::cerr << _useVisFeats << " " << _useGeomFeats << " " << _vis_weight << " " << _geom_weight << "fine \n";
-    return totalDiffExg + .5 * totalDiffElev;
+    return _vis_weight * totalDiffExg + _geom_weight * totalDiffElev;
 
 }
 

@@ -30,6 +30,9 @@ corresponding to one match per line.
 #include <unordered_map>
 #include <eigen3/Eigen/Geometry>
 
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/io/ply_io.h>
+
 #ifdef BUILD_WITH_PCL
 	#include "features/include/pcl/features/fpfh.h"
 	#include "features/include/pcl/features/normal_3d.h"

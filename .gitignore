@@ -3,3 +3,10 @@
 bin/
 build/
 src/packageDir.h
+params/test_params_archive/
+params/test_params/
+params/output/
+maps/
+original_pointclouds/
+cmake-build-release/
+cmake-build-debug/
