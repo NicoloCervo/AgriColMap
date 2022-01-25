@@ -577,11 +577,18 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
         cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
         CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
 
-        std::string writePath = "/home/n/Desktop/cloud.ply";
+
+        boost::filesystem::path full_path(boost::filesystem::current_path());
+
+        std::string writePath = full_path.string() + "/../feature_extractor/cloud.ply";
+        //std::string writePath = "/home/n/Desktop/cloud.ply";
         pcl::io::savePLYFileBinary(writePath, *cloud);
 
         ///call other binary for feature extraction
-        char* cmd =(char*)"/home/n/Desktop/feature_extractor/bin/./feature_extractor";
+
+        std::string command = full_path.string() + "/../feature_extractor/bin/./feature_extractor"; const char* cmd = command.c_str();
+        //char* cmd =(char*)"/home/n/Desktop/feature_extractor/bin/./feature_extractor";
+
 
         std::vector<std::string> char_features;
         std::string in = exec(cmd);
@@ -591,7 +598,6 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
 
         std::vector<float> single_histogram;
         std::vector<std::vector<float>> histograms;
-
 
         for(int i=0; i<char_features.size(); i++){
             if(i%featureSize==0 && i!=0){

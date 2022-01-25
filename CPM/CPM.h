@@ -26,6 +26,7 @@ corresponding to one match per line.
 #ifndef _CPM_H_
 #define _CPM_H_
 
+#include "boost/filesystem.hpp"
 #include "ImagePyramid.h"
 #include <unordered_map>
 #include <eigen3/Eigen/Geometry>
