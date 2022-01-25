@@ -20,7 +20,7 @@ make -j8
 ```
 
 
-## Installation with OpenCV > 3.2.0 (with extra modules) without a pre-installed PCL compatible library version ##
+## Installation with OpenCV > 3.2.0 (with extra modules) without a pre-installed PCL compatible library version (RECOMMENDED)##
 
 ```bash
 sudo apt-get install libyaml-cpp-dev
@@ -34,6 +34,12 @@ cmake -DBUILD_WITH_PCL=true ..
 make -j8
 ```
 
+in feature_extractor (compile separatly cause idk)
+```bash
+mkdir build && cd build
+cmake ..
+make -j8
+```
 ### Tutorial ###
 
 In this tutorial, we briefly show how to use the AgriColMap to register 3D maps gathered by aerial and ground robots.
